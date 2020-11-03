@@ -1,28 +1,48 @@
 var ideas = JSON.parse(localStorage.getItem('ideas')) || [];
-// var starredIdeas = JSON.parse(localStorage.getItem('starredIdeas')) || [];
 var titleInput = document.querySelector('.title-input');
 var bodyInput = document.querySelector('.body-input');
 var cardsDisplay = document.querySelector('.cards-display');
-var searchInput = document.querySelector('.search-input')
+var searchInput = document.querySelector('.search-input');
 var inputFields = document.querySelector('.input-fields');
 var commentForm = document.querySelector('.comment-form');
 var commentInput = document.querySelector('.comment-input');
 var cardId = document.querySelector('.card-id');
+var modal = document.querySelector('.modal');
+var commentDisplay = document.querySelector('.comment-display');
+var modalDisplayId = document.querySelector('.modal-display-id');
+var modalDisplayIndex = document.querySelector('.modal-display-index');
 
 var saveButton = document.querySelector('.save-button');
 var showFavButton = document.querySelector('.show-stars');
 var saveCommentButton = document.querySelector('.comment-save-button');
+var showCommentsButton = document.querySelector('.view-comment');
+var closeCommentsButton = document.querySelector('.close-comments-button');
 
-
-window.onload = redrawCardsDisplay()
+window.onload = redrawCardsDisplay();
 saveButton.addEventListener('click', saveIdea);
-titleInput.addEventListener('keyup', toggleSaveButton);
-bodyInput.addEventListener('keyup', toggleSaveButton);
-searchInput.addEventListener('keyup', filterCards)
-commentInput.addEventListener('keyup', toggleSaveCommentButton);
+searchInput.addEventListener('keyup', filterCards);
+
+titleInput.addEventListener('keyup', function () {
+  if (bodyInput.value !== '') {
+    toggleButton(saveButton, titleInput)
+  }
+});
+
+bodyInput.addEventListener('keyup', function () {
+  if (titleInput.value !== '') {
+    toggleButton(saveButton, bodyInput)
+  }
+});
+
+commentInput.addEventListener('keyup', function () {
+  toggleButton(saveCommentButton, commentInput)
+});
+
 saveCommentButton.addEventListener('click', function (event) {
   saveComment(event);
+  toggleButton(saveCommentButton, commentInput)
 });
+
 showFavButton.addEventListener('click', function (event) {
   if (showFavButton.innerText === "Show Starred Ideas") {
     showFavButton.innerText = "Show All Ideas"
@@ -31,33 +51,68 @@ showFavButton.addEventListener('click', function (event) {
     showFavButton.innerText = "Show Starred Ideas";
     redrawCardsDisplay();
   }
-})
-
+});
 
 cardsDisplay.addEventListener('click', function (event) {
-  if (event.target.className === "delete-button") {
+  if (event.target.className === 'delete-button') {
     deleteCard(event);
-    var tempIdea = createTempIdea();
+    var tempIdea = createTempIdea(event);
     tempIdea.deleteFromStorage('ideas', tempIdea);
-  } else if (event.target.classList.contains("favorite")) {
+  } else if (event.target.classList.contains('favorite')) {
     toggleElement(event);
     updateStar(event)
-  } else if (event.target.classList.contains("card-footer")) {
+  } else if (event.target.classList.contains('card-footer')) {
     inputFields.classList.toggle('hidden');
     commentForm.classList.toggle('hidden');
-    cardId.innerText = event.target.parentNode.id;
+    cardId.innerText = event.target.parentNode.parentNode.parentNode.id;
+  } else if (event.target.classList.contains('view-comment')) {
+    showComments(event)
   }
-})
+});
 
-function toggleSaveCommentButton() {
-  if (commentInput.value === '') {
-    saveCommentButton.disabled = true;
-    saveCommentButton.classList.add('disabled');
-  } else {
-    saveCommentButton.disabled = false;
-    saveCommentButton.classList.remove('disabled');
+modal.addEventListener('click', function (event) {
+  if (event.target.id === 'close-comments-button') {
+    modal.classList.add('hidden')
+  } else if (event.target.className === 'comment-hand') {
+    var commentMessage = event.target.parentNode.innerText.slice(3)
+    var commentIndex = findCommentIndex(event, commentMessage)
+    var tempComment = new Comment(commentMessage)
+    tempComment.deleteFromStorage('ideas', modalDisplayIndex.innerText, commentIndex)
+    ideas[modalDisplayIndex.innerText].comments.splice(commentIndex, 1)
+    redrawComments(modalDisplayIndex.innerText)
   }
-}
+});
+
+function openModal() {
+  modal.classList.remove('hidden')
+};
+
+function findCommentIndex(event, commentMessage) {
+  var modalCardIndex = findCardIndex(event, modalDisplayId.innerText)
+  for (var i = 0; i < ideas[modalCardIndex].comments.length; i++) {
+    if (ideas[modalCardIndex].comments[i] === commentMessage) {
+      return i
+    }
+  }
+};
+
+function redrawComments(index) {
+  commentDisplay.innerHTML = ""
+  for (var i = 0; i < ideas[index].comments.length; i++) {
+    commentDisplay.innerHTML += `<p class="comment-text"><span class="comment-hand">👉</span> ${ideas[index].comments[i]}</p>`
+  }
+};
+
+function showComments(event) {
+  var index = findCardIndex(event, event.target.parentNode.parentNode.id);
+  commentDisplay.innerHTML = ""
+  for (var i = 0; i < ideas[index].comments.length; i++) {
+    commentDisplay.innerHTML += `<p class="comment-text"><span class="comment-hand">👉</span> ${ideas[index].comments[i]}</p>`
+  }
+  modalDisplayId.innerText = event.target.parentNode.parentNode.id;
+  modalDisplayIndex.innerText = index
+  openModal()
+};
 
 function filterCards() {
   cardsDisplay.innerHTML = '';
@@ -67,45 +122,41 @@ function filterCards() {
       displayCard(ideas[i])
     }
   }
-}
+};
 
 function toggleFavorites(event) {
   cardsDisplay.innerHTML = ""
-    for (var i = 0; i < ideas.length; i++) {
-      if (ideas[i].star) {
-        displayCard(ideas[i])
-      }
+  for (var i = 0; i < ideas.length; i++) {
+    if (ideas[i].star) {
+      displayCard(ideas[i])
+    }
   }
-}
+};
 
 function updateStar(event) {
-  cardIndex = findCardIndex(event);
+  cardIndex = findCardIndex(event, event.target.closest('article').id);
   var ideasArray = JSON.parse(localStorage.getItem('ideas'))
   var currentIdea = ideasArray[cardIndex]
   currentIdea.star = !currentIdea.star;
   currentIdea = new Idea(currentIdea.title, currentIdea.body, currentIdea.id, currentIdea.star);
   ideas.splice(cardIndex, 1, currentIdea);
   currentIdea.updateIdea('ideas', currentIdea, cardIndex)
-}
+};
 
-function findCardIndex(event) {
-    if (event.target.classList.contains('star')) {
-      var currentId = parseInt(event.target.closest('article').id)
-    } else if (event.target.className === 'comment-save-button') {
-      var currentId = parseInt(cardId.innerText);
-    }
-    return ideas.findIndex(function (element) {
+function findCardIndex(event, path) {
+  var currentId = parseInt(path)
+  return ideas.findIndex(function (element) {
     return element.id === currentId;
   })
-}
+};
 
-function createTempIdea() {
+function createTempIdea(event) {
   var curTitle = event.target.parentNode.nextElementSibling.firstElementChild.innerText
   var curBody = event.target.parentNode.nextElementSibling.lastElementChild.innerText
   var curId = event.target.parentNode.parentNode.id
   var curStar = event.target.parentNode.id
   return new Idea(curTitle, curBody, curId, curStar);
-}
+};
 
 function deleteCard(event) {
   for (var i = 0; i < ideas.length; i++) {
@@ -114,14 +165,14 @@ function deleteCard(event) {
       redrawCardsDisplay()
     }
   }
-}
+};
 
 function redrawCardsDisplay() {
   cardsDisplay.innerHTML = ""
   for (var i = 0; i < ideas.length; i++) {
     displayCard(ideas[i])
   }
-}
+};
 
 function saveIdea() {
   var newIdea = new Idea(titleInput.value, bodyInput.value)
@@ -129,22 +180,32 @@ function saveIdea() {
   newIdea.saveToStorage('ideas');
   displayCard(newIdea);
   clearInputs(bodyInput, titleInput);
-  toggleSaveButton()
-}
+  toggleButton(saveButton, bodyInput)
+};
+
+function toggleButton(button, input) {
+  if (input.value === "") {
+    button.disabled = true;
+    button.classList.add('disabled');
+  } else {
+    button.disabled = false;
+    button.classList.remove('disabled');
+  }
+};
 
 function saveComment(event) {
   var message = commentInput.value;
-  var index = findCardIndex(event);
+  var index = findCardIndex(event, cardId.innerText);
   var newComment = new Comment(message)
   ideas[index].comments.push(message);
   newComment.saveToStorage('ideas', index);
   clearInputs(commentInput, commentInput);
-}
+};
 
 function clearInputs(body, title) {
   body.value = '';
   title.value = '';
-}
+};
 
 function toggleElement(event) {
   if (event.target.attributes.src.nodeValue === "./assets/star.svg") {
@@ -152,7 +213,7 @@ function toggleElement(event) {
   } else {
     event.target.attributes.src.nodeValue = "./assets/star.svg";
   }
-}
+};
 
 function checkStar(idea) {
   if (idea.star) {
@@ -160,7 +221,7 @@ function checkStar(idea) {
   } else {
     return "./assets/star.svg"
   }
-}
+};
 
 function displayCard(newIdea) {
   var imageSource = checkStar(newIdea);
@@ -168,71 +229,18 @@ function displayCard(newIdea) {
     <article class="cards" id=${newIdea.id}>
       <header class="card-header" id=${newIdea.star}>
         <img src=${imageSource} class="favorite star" alt="A white star">
-        <img src="./assets/delete.svg" class="delete-button" alt="An X">
+        <div class="delete-button"></div>
       </header>
       <div class="idea-text">
         <h1 class="idea-title">${newIdea.title}</h1>
         <p class="idea-body">${newIdea.body}</p>
       </div>
-      <div class="card-footer">
-        <img src="./assets/comment.svg" alt="">
-        <p class="comment">Comment</p>
+      <div class="card-footer-box">
+        <div id="comment-word">
+          <img src="./assets/comment.svg" class="card-footer" alt="A plus sign">
+          <p class="comment card-footer">Comment</p>
+        </div>
+        <img src="./assets/comment-active.png" class="view-comment" id="comment-bubble" alt="A speech bubble">
       </div>
     </article>`
-}
-
-function toggleSaveButton() {
-  if (titleInput.value === '' || bodyInput.value === '') {
-    saveButton.disabled = true;
-    saveButton.classList.add('disabled');
-  } else {
-    saveButton.disabled = false;
-    saveButton.classList.remove('disabled');
-  }
-}
-
-//Pseudocode - Iteration 5
-// 8. display text that the user inputted on the comment card
-// 9. clear input field after comment has been added
-// 11. make sure comment still stays on the page when it refreshes
-
-//Pseudocode - Iteration 4
-// 1. Add window on load listener
-// 2. Populate card display
-// 3. send deletion to local storage
-// 4. change current idea this.star to true
-// 5. update ideas array with current idea
-// 6. update local storage ideas array
-// 7. check if idea.star is true for each idea on page load
-// 8. display card only if true
-// 9. Redraw cards display based on this.star value
-//    - check if this.star
-//    - redraw display with this.star = true cards
-
-// 10. On keyup, check title and body (to upper case) of each card for search input value (to upper case)
-// 11. Display cards that match
-
-
-// ADDITION => Add message if no cards are favorited
-
-
-//Pseudocode - Iteration 3
-// 1. Delete button should delete the card
-// 2. Star should toggle on click and save to favorites array
-// 3. all without refreshing the page
-
-
-//Pseudocode - Iteration 2
-// 1. Utilize new idea class to populate our HTML element that is the card
-// 2. Need to take newIdea.title/body and iterpolate that into HTML
-// 3. Update cards display area HTML with our new card
-
-//Pseudocode - iteration 1
-//1. saveButton should only use class constructor and push data to the arrays
-//2. verify inputs have required inputs for error handling when a user clicks the save button
-//3. once the save button is pushed, idea title/body are being pushed into new array
-// title input/body input = new Idea. helper function
-//4. instantiating new instance of Idea class
-//5. push new instance of Idea class to the ideas array (an array of objects)
-//6. add save to localStorage
-//7. clear out input boxes - call function inside saveIdea function
+};
