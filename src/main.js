@@ -71,7 +71,7 @@ cardsDisplay.addEventListener('click', function (event) {
 modal.addEventListener('click', function (event) {
   if (event.target.id === 'close-comments-button') {
     modal.classList.add('hidden')
-  } else if (event.target.className === 'comment-x') {
+  } else if (event.target.className === 'remove-x') {
     var commentMessage = event.target.parentNode.innerText.slice(3)
     var commentIndex = findCommentIndex(commentMessage)
     var tempComment = new Comment(commentMessage)
@@ -103,7 +103,7 @@ function findCardIndex(event, path) {
 function redrawComments(index) {
   commentDisplay.innerHTML = ""
   for (var i = 0; i < ideas[index].comments.length; i++) {
-    commentDisplay.innerHTML += `<p class="comment-text"><span class="comment-x">👉</span> ${ideas[index].comments[i]}</p>`
+    commentDisplay.innerHTML += `<p class="comment-text"><span class="remove-x">*</span> ${ideas[index].comments[i]}</p>`
   }
 };
 
