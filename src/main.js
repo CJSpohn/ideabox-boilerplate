@@ -19,28 +19,23 @@ var addCommentButton = document.querySelector('.comment-save-button');
 window.onload = redrawCardsDisplay();
 saveButton.addEventListener('click', saveIdea);
 searchInput.addEventListener('keyup', filterCards);
-
 titleInput.addEventListener('keyup', function () {
   if (bodyInput.value !== '') {
     toggleButton(saveButton, titleInput)
   }
 });
-
 bodyInput.addEventListener('keyup', function () {
   if (titleInput.value !== '') {
     toggleButton(saveButton, bodyInput)
   }
 });
-
 commentInput.addEventListener('keyup', function () {
   toggleButton(addCommentButton, commentInput)
 });
-
 addCommentButton.addEventListener('click', function (event) {
   addComment(event);
   toggleButton(addCommentButton, commentInput)
 });
-
 showFavButton.addEventListener('click', function (event) {
   if (showFavButton.innerText === "Show Starred Ideas") {
     showFavButton.innerText = "Show All Ideas"
@@ -50,7 +45,6 @@ showFavButton.addEventListener('click', function (event) {
     redrawCardsDisplay();
   }
 });
-
 cardsDisplay.addEventListener('click', function (event) {
   if (event.target.className === 'delete-button') {
     deleteCard(event);
@@ -67,7 +61,6 @@ cardsDisplay.addEventListener('click', function (event) {
     showComments(event)
   }
 });
-
 modal.addEventListener('click', function (event) {
   if (event.target.id === 'close-comments-button') {
     modal.classList.add('hidden')
